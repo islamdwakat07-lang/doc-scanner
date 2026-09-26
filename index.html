@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ماسح الوثائق</title>
+<style>
+  :root{--bg:#f3f5f8;--card:#fff;--ink:#1d2330;--mute:#6b7485;--pri:#1565c0;--pri2:#0d47a1;--ok:#2e7d32;--bad:#c62828;--line:#e2e6ee}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;font-family:system-ui,"Segoe UI",Tahoma,sans-serif;background:var(--bg);color:var(--ink);font-size:16px}
+  header{background:var(--pri);color:#fff;padding:14px 16px;padding-top:calc(14px + env(safe-area-inset-top));display:flex;align-items:center;gap:10px}
+  header h1{font-size:19px;margin:0;flex:1}
+  header small{opacity:.85;font-size:13px}
+  main{padding:14px 14px 130px}
+  .screen{display:none}.screen.on{display:block}
+  .card{background:var(--card);border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+  label{display:block;font-weight:600;margin-bottom:8px}
+  .row{display:flex;gap:8px;align-items:center}
+  input[type=text]{flex:1;min-width:0;font-size:17px;padding:12px;border:1.5px solid var(--line);border-radius:10px;background:#fff;color:var(--ink)}
+  input[type=text]:focus{outline:none;border-color:var(--pri)}
+  button{font:inherit;border:0;border-radius:10px;padding:12px 16px;cursor:pointer;background:#e8edf5;color:var(--ink)}
+  button.pri{background:var(--pri);color:#fff;font-weight:600}
+  button.ok{background:var(--ok);color:#fff;font-weight:600}
+  button.bad{background:#fdecea;color:var(--bad)}
+  button.mic{background:#fff3e0;font-size:22px;padding:10px 14px}
+  button.mic.live{background:#ffcc80}
+  button.big{width:100%;font-size:18px;padding:16px}
+  button:disabled{opacity:.5}
+  .hint{color:var(--mute);font-size:14px;margin:8px 0 0}
+  .doc{display:flex;gap:12px;align-items:center;background:var(--card);border-radius:12px;padding:10px;margin-bottom:8px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+  .doc.sel{outline:2.5px solid var(--pri)}
+  .doc img{width:56px;height:74px;object-fit:cover;border-radius:6px;background:#eee;border:1px solid var(--line);flex:none}
+  .doc .info{flex:1;min-width:0}
+  .doc .nm{font-weight:600;word-break:break-word}
+  .doc .pg{color:var(--mute);font-size:13px;margin-top:3px}
+  .doc .acts{display:flex;flex-direction:column;gap:4px}
+  .doc .acts button{padding:6px 10px;font-size:15px}
+  .num{background:var(--pri);color:#fff;border-radius:50%;width:26px;height:26px;display:grid;place-items:center;font-size:13px;flex:none}
+  .bar{position:fixed;inset:auto 0 0 0;background:#fff;border-top:1px solid var(--line);padding:10px 12px;padding-bottom:calc(10px + env(safe-area-inset-bottom));display:flex;gap:8px}
+  .bar button{flex:1;padding:14px 8px}
+  .empty{text-align:center;color:var(--mute);padding:30px 10px}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:10}
+  .modal.on{display:flex}
+  .sheet{background:#fff;width:100%;max-width:560px;border-radius:18px 18px 0 0;padding:18px 16px;padding-bottom:calc(18px + env(safe-area-inset-bottom))}
+  .sheet h3{margin:0 0 12px}
+  .sheet .btns{display:flex;gap:8px;margin-top:14px}.sheet .btns button{flex:1}
+  .busy{position:fixed;inset:0;background:rgba(255,255,255,.85);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:20;gap:14px;font-weight:600}
+  .busy.on{display:flex}
+  .spin{width:42px;height:42px;border:4px solid #cfd8e6;border-top-color:var(--pri);border-radius:50%;animation:s 1s linear infinite}
+  @keyframes s{to{transform:rotate(360deg)}}
+  .toggle{display:flex;align-items:center;gap:8px;margin-top:12px;color:var(--mute);font-size:14px}
+  .files{font-size:14px;color:var(--mute);word-break:break-word;line-height:1.7}
+  .files b{color:var(--ink)}
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">ماسح الوثائق</h1>
+  <small id="count"></small>
+</header>
+
+<main>
+  <!-- شاشة البداية: اسم صاحب الوثائق -->
+  <section class="screen" id="sStart">
+    <div class="card">
+      <label>اسم صاحب الوثائق</label>
+      <div class="row">
+        <input type="text" id="personIn" placeholder="مثال: محمد أحمد">
+        <button class="mic" data-for="personIn">🎤</button>
+      </div>
+      <p class="hint">سيُحفظ ملف مجمّع باسم: «جميع وثائق …» بالإضافة إلى كل مستند منفرداً.</p>
+    </div>
+    <button class="pri big" id="startBtn">ابدأ</button>
+  </section>
+
+  <!-- شاشة المستندات -->
+  <section class="screen" id="sDocs">
+    <div id="list"></div>
+  </section>
+
+  <!-- شاشة الانتهاء -->
+  <section class="screen" id="sDone">
+    <div class="card">
+      <h3 style="margin-top:0">✅ تم الحفظ</h3>
+      <div class="files" id="doneInfo"></div>
+    </div>
+    <button class="pri big" id="shareAll" style="margin-bottom:10px">📤 مشاركة كل الملفات</button>
+    <button class="big" id="shareOne" style="margin-bottom:10px">📤 مشاركة الملف المجمّع فقط</button>
+    <button class="ok big" id="newJob">➕ عمل جديد</button>
+  </section>
+</main>
+
+<div class="bar" id="docsBar" style="display:none">
+  <button class="pri" id="scanBtn">📄 مسح مستند</button>
+  <button id="selBtn">🔗 دمج</button>
+  <button class="ok" id="saveBtn">💾 حفظ</button>
+</div>
+
+<div class="bar" id="selBar" style="display:none">
+  <button class="pri" id="mergeBtn">دمج المحدد</button>
+  <button id="cancelSel">إلغاء</button>
+</div>
+
+<!-- نافذة التسمية -->
+<div class="modal" id="nameModal">
+  <div class="sheet">
+    <h3 id="nameTitle">اسم المستند</h3>
+    <div class="row">
+      <input type="text" id="nameIn">
+      <button class="mic" data-for="nameIn">🎤</button>
+    </div>
+    <label class="toggle"><input type="checkbox" id="autoMic"> تشغيل الميكروفون تلقائياً بعد كل مسح</label>
+    <div class="btns">
+      <button class="pri" id="nameOk">حفظ الاسم</button>
+      <button id="nameCancel">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<div class="busy" id="busy"><div class="spin"></div><div id="busyTxt">جارٍ العمل…</div></div>
+
+<script src="pdf-lib.min.js"></script>
+<script>
+const Cap = window.Capacitor;
+const { DocumentScanner, SpeechRecognition, Filesystem, Share } = Cap.Plugins;
+const SPEECH_LANG = 'ar-SA';
+const ROOT = 'ماسح الوثائق';
+const $ = id => document.getElementById(id);
+
+// ---------- الحالة (تُحفظ حتى لو أُغلق التطبيق) ----------
+let S = JSON.parse(localStorage.getItem('scanState') || 'null') || { person: '', docs: [], done: null };
+let selMode = false, selected = new Set();
+const save = () => localStorage.setItem('scanState', JSON.stringify(S));
+
+// ---------- أدوات ----------
+const busy = (on, t) => { $('busy').classList.toggle('on', on); if (t) $('busyTxt').textContent = t; };
+const safe = s => (s || '').replace(/[\\/:*?"<>|\n\r\t]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120) || 'بدون اسم';
+const fpath = u => decodeURIComponent(String(u).replace(/^file:\/\//, ''));
+const isCancel = e => /cancel|canceled|cancelled/i.test(String(e && (e.message || e)));
+
+async function dataSrc(path) {
+  const { uri } = await Filesystem.getUri({ path, directory: 'DATA' });
+  return Cap.convertFileSrc(uri);
+}
+async function readBytes(path) {
+  const r = await fetch(await dataSrc(path));
+  return new Uint8Array(await r.arrayBuffer());
+}
+function toB64(bytes) {
+  let s = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+async function writeBytes(path, bytes, directory) {
+  await Filesystem.writeFile({ path, data: toB64(bytes), directory, recursive: true });
+}
+async function mergePdfs(paths) {
+  const out = await PDFLib.PDFDocument.create();
+  for (const p of paths) {
+    const src = await PDFLib.PDFDocument.load(await readBytes(p));
+    const pages = await out.copyPages(src, src.getPageIndices());
+    pages.forEach(pg => out.addPage(pg));
+  }
+  return { bytes: await out.save(), pages: out.getPageCount() };
+}
+async function rm(path, directory = 'DATA') { try { await Filesystem.deleteFile({ path, directory }); } catch (e) {} }
+
+// ---------- الصوت ----------
+async function listen() {
+  const p = await SpeechRecognition.requestPermissions();
+  if (p.speechRecognition !== 'granted') { alert('يجب السماح باستخدام الميكروفون'); return ''; }
+  const r = await SpeechRecognition.start({ language: SPEECH_LANG, maxResults: 1, prompt: 'قل الاسم الآن', partialResults: false, popup: true });
+  return (r.matches && r.matches[0]) || '';
+}
+document.querySelectorAll('.mic').forEach(b => b.onclick = () => micInto(b));
+async function micInto(btn) {
+  const input = $(btn.dataset.for);
+  btn.classList.add('live');
+  try { const t = await listen(); if (t) input.value = t; }
+  catch (e) { if (!isCancel(e)) alert('تعذّر التعرف على الصوت: ' + (e.message || e)); }
+  btn.classList.remove('live');
+}
+
+// ---------- نافذة التسمية ----------
+$('autoMic').checked = localStorage.getItem('autoMic') !== '0';
+$('autoMic').onchange = () => localStorage.setItem('autoMic', $('autoMic').checked ? '1' : '0');
+function askName(title, value, auto) {
+  return new Promise(res => {
+    $('nameTitle').textContent = title; $('nameIn').value = value || '';
+    $('nameModal').classList.add('on');
+    const done = v => { $('nameModal').classList.remove('on'); $('nameOk').onclick = $('nameCancel').onclick = null; res(v); };
+    $('nameOk').onclick = () => done($('nameIn').value.trim() || value);
+    $('nameCancel').onclick = () => done(null);
+    if (auto && $('autoMic').checked) setTimeout(() => micInto(document.querySelector('[data-for=nameIn]')), 250);
+  });
+}
+
+// ---------- المسح ----------
+async function scan() {
+  let r;
+  try {
+    r = await DocumentScanner.scanDocument({ pageLimit: 30, resultFormats: 'JPEG_PDF', scannerMode: 'FULL', galleryImportAllowed: true });
+  } catch (e) {
+    if (isCancel(e)) return;
+    alert('تعذّر فتح الماسح: ' + (e.message || e) + '\nتأكد من تحديث خدمات Google Play واتصال الإنترنت عند أول استخدام.');
+    return;
+  }
+  if (!r || !r.pdf) return;
+  busy(true, 'جارٍ حفظ المسح…');
+  const id = String(Date.now());
+  const pdf = `work/${id}.pdf`, thumb = `work/${id}.jpg`;
+  try {
+    await Filesystem.mkdir({ path: 'work', directory: 'DATA', recursive: true }).catch(() => {});
+    await Filesystem.copy({ from: fpath(r.pdf.uri), to: pdf, toDirectory: 'DATA' });
+    if (r.scannedImages && r.scannedImages[0]) await Filesystem.copy({ from: fpath(r.scannedImages[0]), to: thumb, toDirectory: 'DATA' });
+  } catch (e) { busy(false); alert('خطأ في الحفظ: ' + (e.message || e)); return; }
+  busy(false);
+  const def = `مستند ${S.docs.length + 1}`;
+  const name = await askName(`اسم المستند (${r.pdf.pageCount} ${r.pdf.pageCount > 1 ? 'صفحات' : 'صفحة'})`, def, true);
+  S.docs.push({ id, name: name || def, pages: r.pdf.pageCount, pdf, thumb });
+  save(); render();
+}
+
+// ---------- العرض ----------
+function show(screen) {
+  ['sStart', 'sDocs', 'sDone'].forEach(s => $(s).classList.toggle('on', s === screen));
+  $('docsBar').style.display = screen === 'sDocs' && !selMode ? 'flex' : 'none';
+  $('selBar').style.display = screen === 'sDocs' && selMode ? 'flex' : 'none';
+}
+async function render() {
+  if (S.done) { renderDone(); return; }
+  if (!S.person) { $('title').textContent = 'ماسح الوثائق'; $('count').textContent = ''; show('sStart'); return; }
+  $('title').textContent = 'وثائق: ' + S.person;
+  const pages = S.docs.reduce((a, d) => a + d.pages, 0);
+  $('count').textContent = `${S.docs.length} مستند · ${pages} صفحة`;
+  show('sDocs');
+  const L = $('list'); L.innerHTML = '';
+  if (!S.docs.length) {
+    L.innerHTML = `<div class="empty">اضغط «📄 مسح مستند» للبدء.<br><br>• لمستند من ورقة واحدة: صوّر ورقة ثم «تم».<br>• لمستند من عدة أوراق في PDF واحد: صوّر كل أوراقه في نفس المرة قبل «تم».<br><br><small>اضغط مطولاً على العنوان لتغيير اسم صاحب الوثائق.</small></div>`;
+    return;
+  }
+  S.docs.forEach((d, i) => {
+    const el = document.createElement('div');
+    el.className = 'doc' + (selected.has(d.id) ? ' sel' : '');
+    el.innerHTML = `<div class="num">${i + 1}</div><img alt=""><div class="info"><div class="nm"></div><div class="pg">${d.pages} ${d.pages > 1 ? 'صفحات' : 'صفحة'}</div></div>` +
+      (selMode ? '' : `<div class="acts"><button data-a="ren">✏️</button><button data-a="up" ${i ? '' : 'disabled'}>⬆️</button><button data-a="down" ${i < S.docs.length - 1 ? '' : 'disabled'}>⬇️</button><button class="bad" data-a="del">🗑️</button></div>`);
+    el.querySelector('.nm').textContent = d.name;
+    if (d.thumb) dataSrc(d.thumb).then(u => el.querySelector('img').src = u).catch(() => {});
+    el.onclick = ev => {
+      const a = ev.target.closest('button') && ev.target.closest('button').dataset.a;
+      if (selMode) { selected.has(d.id) ? selected.delete(d.id) : selected.add(d.id); render(); return; }
+      if (a) act(a, i);
+    };
+    L.appendChild(el);
+  });
+}
+async function act(a, i) {
+  const d = S.docs[i];
+  if (a === 'ren') { const n = await askName('تعديل الاسم', d.name, false); if (n) d.name = n; }
+  if (a === 'up') [S.docs[i - 1], S.docs[i]] = [S.docs[i], S.docs[i - 1]];
+  if (a === 'down') [S.docs[i + 1], S.docs[i]] = [S.docs[i], S.docs[i + 1]];
+  if (a === 'del') { if (!confirm(`حذف «${d.name}»؟`)) return; S.docs.splice(i, 1); rm(d.pdf); rm(d.thumb); }
+  save(); render();
+}
+
+// ---------- الدمج اليدوي ----------
+$('selBtn').onclick = () => { if (S.docs.length < 2) return alert('يلزم مستندان على الأقل'); selMode = true; selected.clear(); render(); };
+$('cancelSel').onclick = () => { selMode = false; selected.clear(); render(); };
+$('mergeBtn').onclick = async () => {
+  const pick = S.docs.filter(d => selected.has(d.id));
+  if (pick.length < 2) return alert('اختر مستندين أو أكثر');
+  const name = await askName('اسم المستند المدموج', pick[0].name, false);
+  if (!name) return;
+  busy(true, 'جارٍ الدمج…');
+  try {
+    const { bytes, pages } = await mergePdfs(pick.map(d => d.pdf));
+    const id = String(Date.now()), pdf = `work/${id}.pdf`;
+    await writeBytes(pdf, bytes, 'DATA');
+    const at = S.docs.indexOf(pick[0]);
+    const nd = { id, name, pages, pdf, thumb: pick[0].thumb };
+    S.docs = S.docs.filter(d => !selected.has(d.id));
+    S.docs.splice(Math.min(at, S.docs.length), 0, nd);
+    pick.forEach(d => { rm(d.pdf); if (d !== pick[0]) rm(d.thumb); });
+  } catch (e) { alert('خطأ في الدمج: ' + (e.message || e)); }
+  busy(false); selMode = false; selected.clear(); save(); render();
+};
+
+// ---------- الحفظ النهائي ----------
+$('saveBtn').onclick = async () => {
+  if (!S.docs.length) return alert('لا توجد مستندات بعد');
+  busy(true, 'جارٍ حفظ الملفات…');
+  try {
+    try { await Filesystem.requestPermissions(); } catch (e) {}
+    const folder = `${ROOT}/${safe(S.person)}`;
+    await Filesystem.mkdir({ path: folder, directory: 'DOCUMENTS', recursive: true }).catch(() => {});
+    const used = new Set(), files = [];
+    const uniq = n => { let f = `${n}.pdf`, k = 2; while (used.has(f)) f = `${n} (${k++}).pdf`; used.add(f); return f; };
+    for (const d of S.docs) {
+      const f = uniq(safe(d.name)), path = `${folder}/${f}`;
+      await rm(path, 'DOCUMENTS');
+      await Filesystem.copy({ from: d.pdf, directory: 'DATA', to: path, toDirectory: 'DOCUMENTS' });
+      files.push({ name: f, uri: (await Filesystem.getUri({ path, directory: 'DOCUMENTS' })).uri });
+    }
+    busy(true, 'جارٍ إنشاء الملف المجمّع…');
+    const all = uniq(safe('جميع وثائق ' + S.person)), allPath = `${folder}/${all}`;
+    const { bytes, pages } = await mergePdfs(S.docs.map(d => d.pdf));
+    await writeBytes(allPath, bytes, 'DOCUMENTS');
+    const allUri = (await Filesystem.getUri({ path: allPath, directory: 'DOCUMENTS' })).uri;
+    S.done = { folder: `Documents/${folder}`, files, all: { name: all, uri: allUri, pages } };
+    save();
+  } catch (e) { busy(false); alert('تعذّر الحفظ: ' + (e.message || e)); return; }
+  busy(false); render();
+};
+function renderDone() {
+  const D = S.done;
+  $('title').textContent = 'وثائق: ' + S.person; $('count').textContent = '';
+  $('doneInfo').innerHTML = `المجلد: <b></b><br>الملف المجمّع: <b></b> (${D.all.pages} صفحة)<br>المستندات المنفردة: ${D.files.length}`;
+  const b = $('doneInfo').querySelectorAll('b'); b[0].textContent = D.folder; b[1].textContent = D.all.name;
+  show('sDone');
+}
+$('shareAll').onclick = () => Share.share({ title: 'وثائق ' + S.person, files: [S.done.all.uri, ...S.done.files.map(f => f.uri)] }).catch(() => {});
+$('shareOne').onclick = () => Share.share({ title: S.done.all.name, files: [S.done.all.uri] }).catch(() => {});
+$('newJob').onclick = async () => {
+  if (!confirm('بدء عمل جديد؟ الملفات المحفوظة تبقى في مجلد المستندات.')) return;
+  for (const d of S.docs) { await rm(d.pdf); await rm(d.thumb); }
+  S = { person: '', docs: [], done: null }; save(); $('personIn').value = ''; render();
+};
+
+// ---------- البداية ----------
+$('startBtn').onclick = () => {
+  const n = $('personIn').value.trim();
+  if (!n) return alert('اكتب أو قل اسم صاحب الوثائق');
+  S.person = n; save(); render();
+};
+$('scanBtn').onclick = scan;
+let pressT;
+$('title').addEventListener('touchstart', () => pressT = setTimeout(async () => {
+  if (!S.person || S.done) return;
+  const n = await askName('اسم صاحب الوثائق', S.person, false); if (n) { S.person = n; save(); render(); }
+}, 700));
+$('title').addEventListener('touchend', () => clearTimeout(pressT));
+render();
+</script>
+</body>
+</html>
