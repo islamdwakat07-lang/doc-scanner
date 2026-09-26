@@ -15,10 +15,10 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
-      
 
       - name: Install
         run: |
+          mkdir -p www && if [ -f index.html ]; then cp index.html www/; fi
           npm install
           npm run web
 
