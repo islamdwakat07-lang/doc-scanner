@@ -15,29 +15,65 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
-      - uses: android-actions/setup-android@v3
 
       - name: Install
         run: |
+          mkdir -p www && if [ -f index.html ]; then cp index.html www/; fi
+          rm -f package-lock.json
           npm install
           npm run web
+          python3 -m pip install --user --break-system-packages pillow
 
       - name: Create Android project
         run: |
           rm -rf android
           npx cap add android
           npx cap sync android
-          M=android/app/src/main/AndroidManifest.xml
-          sed -i 's#<application#<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />\n    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />\n    <application android:requestLegacyExternalStorage="true"#' $M
-          cat $M
+          python3 - <<'PY'
+          import glob, os, shutil
+          from PIL import Image, ImageDraw
+          m = 'android/app/src/main/AndroidManifest.xml'
+          s = open(m).read()
+          perm = ('<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />\n'
+                  '    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />\n    ')
+          s = s.replace('<application', perm + '<application android:requestLegacyExternalStorage="true"', 1)
+          f = ''
+          for act, types in [('SEND', ['application/pdf', 'image/*']), ('SEND_MULTIPLE', ['application/pdf', 'image/*', '*/*'])]:
+              f += ('<intent-filter><action android:name="android.intent.action.%s" />'
+                    '<category android:name="android.intent.category.DEFAULT" />' % act)
+              f += ''.join('<data android:mimeType="%s" />' % t for t in types) + '</intent-filter>\n        '
+          s = s.replace('</activity>', f + '</activity>', 1)
+          open(m, 'w').write(s)
+          p = glob.glob('node_modules/@capgo/capacitor-share-target/android/src/main/java/**/CapacitorShareTargetPlugin.java', recursive=True)[0]
+          j = open(p).read()
+          if 'public void load()' not in j:
+              j = j.replace('public class CapacitorShareTargetPlugin extends Plugin {',
+                  'public class CapacitorShareTargetPlugin extends Plugin {\n    @Override\n    public void load() { super.load(); handleIntent(getActivity().getIntent()); }\n', 1)
+              open(p, 'w').write(j)
+          if os.path.exists('icon.png'):
+              res = 'android/app/src/main/res'
+              shutil.rmtree(res + '/mipmap-anydpi-v26', ignore_errors=True)
+              src = Image.open('icon.png').convert('RGBA')
+              for d, px in {'mdpi': 48, 'hdpi': 72, 'xhdpi': 96, 'xxhdpi': 144, 'xxxhdpi': 192}.items():
+                  os.makedirs(f'{res}/mipmap-{d}', exist_ok=True)
+                  ic = src.resize((px, px), Image.LANCZOS)
+                  ic.save(f'{res}/mipmap-{d}/ic_launcher.png')
+                  mask = Image.new('L', (px * 4, px * 4), 0)
+                  ImageDraw.Draw(mask).ellipse((0, 0, px * 4 - 1, px * 4 - 1), fill=255)
+                  rnd = Image.new('RGBA', (px, px), (0, 0, 0, 0))
+                  rnd.paste(ic, (0, 0), mask.resize((px, px), Image.LANCZOS))
+                  rnd.save(f'{res}/mipmap-{d}/ic_launcher_round.png')
+          print(s)
+          PY
 
       - name: Build APK
         working-directory: android
         run: |
+          if [ -f ../debug.keystore ]; then mkdir -p ~/.android && cp ../debug.keystore ~/.android/debug.keystore; fi
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
 
       - uses: actions/upload-artifact@v4
         with:
-          name: doc-scanner-apk
+          name: scanner-islam-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk

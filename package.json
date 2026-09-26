@@ -1,18 +1,23 @@
 {
   "name": "doc-scanner",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "scripts": {
-    "web": "cp node_modules/pdf-lib/dist/pdf-lib.min.js www/pdf-lib.min.js"
+    "web": "mkdir -p www/pdfjs && cp node_modules/pdf-lib/dist/pdf-lib.min.js www/ && cp node_modules/fflate/umd/index.js www/fflate.min.js && cp node_modules/pdfjs-dist/legacy/build/pdf.min.mjs www/pdfjs/pdf.min.js && cp node_modules/pdfjs-dist/legacy/build/pdf.worker.min.mjs www/pdfjs/pdf.worker.min.js && cp -r node_modules/pdfjs-dist/cmaps node_modules/pdfjs-dist/standard_fonts node_modules/pdfjs-dist/wasm node_modules/pdfjs-dist/iccs www/pdfjs/"
   },
   "dependencies": {
     "@capacitor/android": "^8.0.0",
+    "@capacitor/app": "^8.0.0",
     "@capacitor/cli": "^8.0.0",
     "@capacitor/core": "^8.0.0",
     "@capacitor/filesystem": "^8.0.0",
     "@capacitor/share": "^8.0.0",
     "@capacitor-mlkit/document-scanner": "^8.0.0",
     "@capacitor-community/speech-recognition": "^7.0.1",
-    "pdf-lib": "^1.17.1"
+    "@capawesome/capacitor-file-picker": "^8.0.0",
+    "@capgo/capacitor-share-target": "^8.0.0",
+    "fflate": "0.8.3",
+    "pdf-lib": "1.17.1",
+    "pdfjs-dist": "6.3.289"
   }
 }

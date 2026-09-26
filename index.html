@@ -3,15 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ماسح الوثائق</title>
+<title>سكانر إسلام</title>
 <style>
-  :root{--bg:#f3f5f8;--card:#fff;--ink:#1d2330;--mute:#6b7485;--pri:#1565c0;--pri2:#0d47a1;--ok:#2e7d32;--bad:#c62828;--line:#e2e6ee}
+  :root{--bg:#f3f5f8;--card:#fff;--ink:#1d2330;--mute:#6b7485;--pri:#1565c0;--ok:#2e7d32;--bad:#c62828;--line:#e2e6ee;--warn:#fff4e0}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   body{margin:0;font-family:system-ui,"Segoe UI",Tahoma,sans-serif;background:var(--bg);color:var(--ink);font-size:16px}
-  header{background:var(--pri);color:#fff;padding:14px 16px;padding-top:calc(14px + env(safe-area-inset-top));display:flex;align-items:center;gap:10px}
+  header{background:var(--pri);color:#fff;padding:14px 16px;padding-top:calc(14px + env(safe-area-inset-top));display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:5}
   header h1{font-size:19px;margin:0;flex:1}
   header small{opacity:.85;font-size:13px}
-  main{padding:14px 14px 130px}
+  main{padding:14px 14px 140px}
   .screen{display:none}.screen.on{display:block}
   .card{background:var(--card);border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
   label{display:block;font-weight:600;margin-bottom:8px}
@@ -25,7 +25,7 @@
   button.mic{background:#fff3e0;font-size:22px;padding:10px 14px}
   button.mic.live{background:#ffcc80}
   button.big{width:100%;font-size:18px;padding:16px}
-  button:disabled{opacity:.5}
+  button:disabled{opacity:.45}
   .hint{color:var(--mute);font-size:14px;margin:8px 0 0}
   .doc{display:flex;gap:12px;align-items:center;background:var(--card);border-radius:12px;padding:10px;margin-bottom:8px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
   .doc.sel{outline:2.5px solid var(--pri)}
@@ -36,80 +36,118 @@
   .doc .acts{display:flex;flex-direction:column;gap:4px}
   .doc .acts button{padding:6px 10px;font-size:15px}
   .num{background:var(--pri);color:#fff;border-radius:50%;width:26px;height:26px;display:grid;place-items:center;font-size:13px;flex:none}
-  .bar{position:fixed;inset:auto 0 0 0;background:#fff;border-top:1px solid var(--line);padding:10px 12px;padding-bottom:calc(10px + env(safe-area-inset-bottom));display:flex;gap:8px}
-  .bar button{flex:1;padding:14px 8px}
-  .empty{text-align:center;color:var(--mute);padding:30px 10px}
+  .bar{position:fixed;inset:auto 0 0 0;background:#fff;border-top:1px solid var(--line);padding:10px 10px;padding-bottom:calc(10px + env(safe-area-inset-bottom));display:none;gap:6px;z-index:6}
+  .bar button{flex:1;padding:12px 4px;font-size:15px}
+  .empty{text-align:center;color:var(--mute);padding:26px 10px;line-height:1.7}
+  .banner{background:var(--warn);border-radius:12px;padding:12px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px;font-weight:600}
+  .banner span{flex:1}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .tile{position:relative;background:#fff;border-radius:10px;padding:6px;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+  .tile img{width:100%;aspect-ratio:3/4;object-fit:contain;background:#f0f0f0;border-radius:6px;display:block}
+  .tile .lb{font-size:11px;color:var(--mute);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tile .no{position:absolute;top:10px;right:10px;background:rgba(0,0,0,.6);color:#fff;border-radius:12px;padding:1px 8px;font-size:13px}
+  .tile .zoom{position:absolute;bottom:26px;left:10px;padding:4px 8px;font-size:15px;background:rgba(255,255,255,.9)}
+  .tile.sel{outline:3px solid var(--pri)}
+  .tile.sel::after{content:"✓";position:absolute;top:8px;left:10px;background:var(--pri);color:#fff;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:14px}
   .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:10}
   .modal.on{display:flex}
-  .sheet{background:#fff;width:100%;max-width:560px;border-radius:18px 18px 0 0;padding:18px 16px;padding-bottom:calc(18px + env(safe-area-inset-bottom))}
+  .sheet{background:#fff;width:100%;max-width:560px;border-radius:18px 18px 0 0;padding:18px 16px;padding-bottom:calc(18px + env(safe-area-inset-bottom));max-height:96vh;overflow:auto}
   .sheet h3{margin:0 0 12px}
   .sheet .btns{display:flex;gap:8px;margin-top:14px}.sheet .btns button{flex:1}
-  .busy{position:fixed;inset:0;background:rgba(255,255,255,.85);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:20;gap:14px;font-weight:600}
+  #namePrev{display:none;max-width:100%;max-height:34vh;margin:0 auto 12px;border:1px solid var(--line);border-radius:8px}
+  .viewer{position:fixed;inset:0;background:#222;z-index:15;display:none;flex-direction:column}
+  .viewer.on{display:flex}
+  .viewer .vt{display:flex;gap:8px;padding:10px;padding-top:calc(10px + env(safe-area-inset-top));background:#111}
+  .viewer .vt button{background:#333;color:#fff;padding:8px 14px}
+  .viewer .vt span{flex:1;color:#ddd;align-self:center;font-size:14px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  .viewer .vb{flex:1;overflow:auto;padding:10px}
+  .viewer .vb img{display:block;margin:0 auto 10px;background:#fff;width:100%}
+  .busy{position:fixed;inset:0;background:rgba(255,255,255,.88);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:20;gap:14px;font-weight:600;text-align:center;padding:20px}
   .busy.on{display:flex}
   .spin{width:42px;height:42px;border:4px solid #cfd8e6;border-top-color:var(--pri);border-radius:50%;animation:s 1s linear infinite}
   @keyframes s{to{transform:rotate(360deg)}}
-  .toggle{display:flex;align-items:center;gap:8px;margin-top:12px;color:var(--mute);font-size:14px}
+  .toggle{display:flex;align-items:center;gap:8px;margin-top:10px;color:var(--mute);font-size:14px;font-weight:400}
   .files{font-size:14px;color:var(--mute);word-break:break-word;line-height:1.7}
   .files b{color:var(--ink)}
 </style>
 </head>
 <body>
 <header>
-  <h1 id="title">ماسح الوثائق</h1>
+  <h1 id="title">سكانر إسلام</h1>
   <small id="count"></small>
 </header>
 
 <main>
-  <!-- شاشة البداية: اسم صاحب الوثائق -->
+  <!-- البداية -->
   <section class="screen" id="sStart">
+    <div class="banner" id="pendingNote" style="display:none"><span></span></div>
     <div class="card">
       <label>اسم صاحب الوثائق</label>
       <div class="row">
         <input type="text" id="personIn" placeholder="مثال: محمد أحمد">
         <button class="mic" data-for="personIn">🎤</button>
       </div>
-      <p class="hint">سيُحفظ ملف مجمّع باسم: «جميع وثائق …» بالإضافة إلى كل مستند منفرداً.</p>
+      <p class="hint">سيُحفظ ملف مجمّع باسم «جميع وثائق …» بالإضافة إلى كل مستند منفرداً.</p>
     </div>
     <button class="pri big" id="startBtn">ابدأ</button>
   </section>
 
-  <!-- شاشة المستندات -->
+  <!-- المستندات -->
   <section class="screen" id="sDocs">
+    <div class="banner" id="poolBanner" style="display:none"><span></span><button class="pri" id="openPool">فتح</button></div>
     <div id="list"></div>
   </section>
 
-  <!-- شاشة الانتهاء -->
+  <!-- الصفحات المستوردة -->
+  <section class="screen" id="sPool">
+    <div class="card" style="padding:12px 14px">
+      <div class="hint" style="margin:0">اضغط على الصفحات لتحديدها، ثم «✅ مستند» لجمعها في PDF واحد باسم، أو «📄 منفردة» ليكون لكل صفحة ملف باسمها. 🔍 لتكبير الصفحة.</div>
+      <label class="toggle"><input type="checkbox" id="enhance"> تحسين الصور المستوردة (إزالة الظلال وتبييض الخلفية)</label>
+    </div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <!-- الانتهاء -->
   <section class="screen" id="sDone">
     <div class="card">
       <h3 style="margin-top:0">✅ تم الحفظ</h3>
       <div class="files" id="doneInfo"></div>
     </div>
-    <button class="pri big" id="shareAll" style="margin-bottom:10px">📤 مشاركة كل الملفات</button>
+    <button class="pri big" id="shareZip" style="margin-bottom:10px">🗜️ مشاركة الكل كملف مضغوط ZIP</button>
+    <button class="big" id="shareAll" style="margin-bottom:10px">📤 مشاركة الكل كملفات منفصلة</button>
     <button class="big" id="shareOne" style="margin-bottom:10px">📤 مشاركة الملف المجمّع فقط</button>
+    <button class="big" id="backEdit" style="margin-bottom:10px">✏️ رجوع للتعديل</button>
     <button class="ok big" id="newJob">➕ عمل جديد</button>
   </section>
 </main>
 
-<div class="bar" id="docsBar" style="display:none">
-  <button class="pri" id="scanBtn">📄 مسح مستند</button>
+<div class="bar" id="docsBar">
+  <button class="pri" id="scanBtn">📄 مسح</button>
+  <button id="importBtn">📥 استيراد</button>
   <button id="selBtn">🔗 دمج</button>
   <button class="ok" id="saveBtn">💾 حفظ</button>
 </div>
-
-<div class="bar" id="selBar" style="display:none">
+<div class="bar" id="selBar">
   <button class="pri" id="mergeBtn">دمج المحدد</button>
   <button id="cancelSel">إلغاء</button>
 </div>
+<div class="bar" id="poolBar">
+  <button class="pri" id="poolMake">✅ مستند من المحدد</button>
+  <button id="poolSingles">📄 كل صفحة منفردة</button>
+  <button class="bad" id="poolDel">🗑️</button>
+  <button id="poolBack">↩️</button>
+</div>
 
-<!-- نافذة التسمية -->
+<!-- التسمية -->
 <div class="modal" id="nameModal">
   <div class="sheet">
     <h3 id="nameTitle">اسم المستند</h3>
+    <img id="namePrev" alt="">
     <div class="row">
       <input type="text" id="nameIn">
       <button class="mic" data-for="nameIn">🎤</button>
     </div>
-    <label class="toggle"><input type="checkbox" id="autoMic"> تشغيل الميكروفون تلقائياً بعد كل مسح</label>
+    <label class="toggle"><input type="checkbox" id="autoMic"> تشغيل الميكروفون تلقائياً عند التسمية</label>
     <div class="btns">
       <button class="pri" id="nameOk">حفظ الاسم</button>
       <button id="nameCancel">إلغاء</button>
@@ -117,26 +155,36 @@
   </div>
 </div>
 
+<!-- عارض الصفحات -->
+<div class="viewer" id="viewer">
+  <div class="vt"><button id="vClose">✖</button><span id="vTitle"></span><button id="vZoomOut">➖</button><button id="vZoomIn">➕</button></div>
+  <div class="vb" id="vBody"></div>
+</div>
+
 <div class="busy" id="busy"><div class="spin"></div><div id="busyTxt">جارٍ العمل…</div></div>
 
 <script src="pdf-lib.min.js"></script>
+<script src="fflate.min.js"></script>
 <script>
 const Cap = window.Capacitor;
-const { DocumentScanner, SpeechRecognition, Filesystem, Share } = Cap.Plugins;
+const { DocumentScanner, SpeechRecognition, Filesystem, Share, FilePicker, App, CapacitorShareTarget } = Cap.Plugins;
 const SPEECH_LANG = 'ar-SA';
-const ROOT = 'ماسح الوثائق';
+const ROOT = 'سكانر إسلام';
 const $ = id => document.getElementById(id);
 
-// ---------- الحالة (تُحفظ حتى لو أُغلق التطبيق) ----------
-let S = JSON.parse(localStorage.getItem('scanState') || 'null') || { person: '', docs: [], done: null };
-let selMode = false, selected = new Set();
+// ---------- الحالة ----------
+let S = JSON.parse(localStorage.getItem('scanState') || 'null') || {};
+S.person = S.person || ''; S.docs = S.docs || []; S.pool = S.pool || []; S.done = S.done || null;
+let selMode = false, selected = new Set(), poolSel = new Set(), screen = '', pendingShare = null;
 const save = () => localStorage.setItem('scanState', JSON.stringify(S));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
 // ---------- أدوات ----------
 const busy = (on, t) => { $('busy').classList.toggle('on', on); if (t) $('busyTxt').textContent = t; };
 const safe = s => (s || '').replace(/[\\/:*?"<>|\n\r\t]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120) || 'بدون اسم';
 const fpath = u => decodeURIComponent(String(u).replace(/^file:\/\//, ''));
-const isCancel = e => /cancel|canceled|cancelled/i.test(String(e && (e.message || e)));
+const isCancel = e => /cancel/i.test(String(e && (e.message || e)));
+const pagesTxt = n => n === 1 ? 'صفحة واحدة' : n === 2 ? 'صفحتان' : `${n} ${n < 11 ? 'صفحات' : 'صفحة'}`;
 
 async function dataSrc(path) {
   const { uri } = await Filesystem.getUri({ path, directory: 'DATA' });
@@ -144,26 +192,178 @@ async function dataSrc(path) {
 }
 async function readBytes(path) {
   const r = await fetch(await dataSrc(path));
+  if (!r.ok) throw new Error('تعذرت قراءة الملف');
   return new Uint8Array(await r.arrayBuffer());
 }
-function toB64(bytes) {
+function b64of(bytes) {
   let s = '';
   for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
   return btoa(s);
 }
 async function writeBytes(path, bytes, directory) {
-  await Filesystem.writeFile({ path, data: toB64(bytes), directory, recursive: true });
+  const CH = 3 * 1024 * 1024; // أجزاء لتجنب استهلاك الذاكرة مع الملفات الكبيرة
+  await Filesystem.writeFile({ path, data: b64of(bytes.subarray(0, CH)), directory, recursive: true });
+  for (let i = CH; i < bytes.length; i += CH) await Filesystem.appendFile({ path, data: b64of(bytes.subarray(i, i + CH)), directory });
 }
+async function writeDataUrl(path, dataUrl) {
+  await Filesystem.writeFile({ path, data: dataUrl.split(',')[1], directory: 'DATA', recursive: true });
+}
+async function rm(path, directory = 'DATA') { if (!path) return; try { await Filesystem.deleteFile({ path, directory }); } catch (e) {} }
 async function mergePdfs(paths) {
   const out = await PDFLib.PDFDocument.create();
   for (const p of paths) {
-    const src = await PDFLib.PDFDocument.load(await readBytes(p));
-    const pages = await out.copyPages(src, src.getPageIndices());
-    pages.forEach(pg => out.addPage(pg));
+    const src = await PDFLib.PDFDocument.load(await readBytes(p), { ignoreEncryption: true });
+    (await out.copyPages(src, src.getPageIndices())).forEach(pg => out.addPage(pg));
   }
   return { bytes: await out.save(), pages: out.getPageCount() };
 }
-async function rm(path, directory = 'DATA') { try { await Filesystem.deleteFile({ path, directory }); } catch (e) {} }
+
+// ---------- PDF.js (لعرض الصفحات وصنع الصور المصغرة) ----------
+let pdfjsP;
+const abs = p => new URL(p, location.href).href;
+function pdfjs() {
+  return pdfjsP ||= import('./pdfjs/pdf.min.js').then(m => { m.GlobalWorkerOptions.workerSrc = abs('pdfjs/pdf.worker.min.js'); return m; });
+}
+async function openPdf(bytes) {
+  const lib = await pdfjs();
+  return lib.getDocument({ data: bytes, cMapUrl: abs('pdfjs/cmaps/'), cMapPacked: true, standardFontDataUrl: abs('pdfjs/standard_fonts/'),
+    wasmUrl: abs('pdfjs/wasm/'), iccUrl: abs('pdfjs/iccs/'), isEvalSupported: false }).promise;
+}
+function closePdf(d) { try { d.loadingTask ? d.loadingTask.destroy() : d.destroy && d.destroy(); } catch (e) {} }
+async function renderPage(doc, n, width) {
+  const page = await doc.getPage(n);
+  const vp1 = page.getViewport({ scale: 1 });
+  const vp = page.getViewport({ scale: width / vp1.width });
+  const c = document.createElement('canvas');
+  c.width = Math.ceil(vp.width); c.height = Math.ceil(vp.height);
+  const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+  await page.render({ canvas: c, canvasContext: ctx, viewport: vp }).promise;
+  page.cleanup();
+  return c;
+}
+
+// ---------- تحسين الصور (إزالة الظلال) ----------
+function enhanceCanvas(c) {
+  const W = c.width, H = c.height, ctx = c.getContext('2d');
+  // خلفية تقديرية: تصغير كبير + أخذ الأفتح في الجوار ثم تكبير ناعم
+  const sw = Math.max(8, Math.round(W / 16)), sh = Math.max(8, Math.round(H / 16));
+  const sm = document.createElement('canvas'); sm.width = sw; sm.height = sh;
+  const sctx = sm.getContext('2d'); sctx.drawImage(c, 0, 0, sw, sh);
+  let d = sctx.getImageData(0, 0, sw, sh);
+  for (let pass = 0; pass < 2; pass++) {
+    const src = new Uint8ClampedArray(d.data), out = d.data;
+    for (let y = 0; y < sh; y++) for (let x = 0; x < sw; x++) {
+      let r = 0, g = 0, b = 0;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const xx = Math.min(sw - 1, Math.max(0, x + dx)), yy = Math.min(sh - 1, Math.max(0, y + dy)), i = (yy * sw + xx) * 4;
+        if (src[i] > r) r = src[i]; if (src[i + 1] > g) g = src[i + 1]; if (src[i + 2] > b) b = src[i + 2];
+      }
+      const o = (y * sw + x) * 4; out[o] = r; out[o + 1] = g; out[o + 2] = b;
+    }
+  }
+  sctx.putImageData(d, 0, 0);
+  const bg = document.createElement('canvas'); bg.width = W; bg.height = H;
+  const bctx = bg.getContext('2d'); bctx.imageSmoothingQuality = 'high'; bctx.filter = 'blur(6px)'; bctx.drawImage(sm, 0, 0, W, H);
+  const B = bctx.getImageData(0, 0, W, H).data, img = ctx.getImageData(0, 0, W, H), P = img.data;
+  for (let i = 0; i < P.length; i += 4) {
+    const g = 255 / Math.max(Math.max(B[i], B[i + 1], B[i + 2]), 40); // إزالة الظل
+    const v = [0, 1, 2].map(k => 255 - (255 - P[i + k] * g) * 1.25); // تقوية الكتابة
+    const white = Math.min(v[0], v[1], v[2]) > 185 && (v[0] + v[1] + v[2]) / 3 > 222; // خلفية → أبيض ناصع
+    for (let k = 0; k < 3; k++) P[i + k] = white ? 255 : v[k] < 0 ? 0 : v[k] > 255 ? 255 : v[k];
+  }
+  ctx.putImageData(img, 0, 0);
+}
+async function imageToPage(bytes, mime) {
+  const blob = new Blob([bytes], { type: mime || 'image/jpeg' });
+  const bmp = await createImageBitmap(blob, { imageOrientation: 'from-image' });
+  const k = Math.min(1, 2400 / Math.max(bmp.width, bmp.height));
+  const c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+  const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(bmp, 0, 0, c.width, c.height);
+  bmp.close && bmp.close();
+  if ($('enhance').checked) enhanceCanvas(c);
+  const jpg = new Uint8Array(await (await new Promise(r => c.toBlob(r, 'image/jpeg', 0.88))).arrayBuffer());
+  const pdf = await PDFLib.PDFDocument.create();
+  const im = await pdf.embedJpg(jpg);
+  const pw = c.width > c.height ? 842 : 595, ph = pw * c.height / c.width;
+  pdf.addPage([pw, ph]).drawImage(im, { x: 0, y: 0, width: pw, height: ph });
+  return { pdf: await pdf.save(), thumb: thumbOf(c) };
+}
+function thumbOf(c) {
+  const t = document.createElement('canvas'), w = 360; t.width = w; t.height = Math.round(c.height * w / c.width);
+  const x = t.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, t.width, t.height); x.drawImage(c, 0, 0, t.width, t.height);
+  return t.toDataURL('image/jpeg', 0.8);
+}
+
+// ---------- الاستيراد ----------
+const isPdf = f => /pdf/i.test(f.mime || '') || /\.pdf$/i.test(f.name || '');
+const isImg = f => /^image\//i.test(f.mime || '') || /\.(jpe?g|png|webp|heic|heif|bmp|gif)$/i.test(f.name || '');
+async function fetchBytes(p) {
+  try {
+    const r = await fetch(Cap.convertFileSrc(p));
+    if (r.ok) return new Uint8Array(await r.arrayBuffer());
+  } catch (e) {}
+  const { data } = await Filesystem.readFile({ path: p });
+  if (data instanceof Blob) return new Uint8Array(await data.arrayBuffer());
+  const s = atob(data), u = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i);
+  return u;
+}
+async function importFiles(files) {
+  files = files.filter(f => isPdf(f) || isImg(f));
+  if (!files.length) { alert('لم يتم العثور على صور أو ملفات PDF'); return; }
+  await Filesystem.mkdir({ path: 'work/pool', directory: 'DATA', recursive: true }).catch(() => {});
+  const errors = []; let added = 0;
+  for (let fi = 0; fi < files.length; fi++) {
+    const f = files[fi], base = (f.name || 'ملف').replace(/\.[^.]+$/, '');
+    busy(true, `جارٍ تجهيز الملف ${fi + 1} من ${files.length}…\n${f.name || ''}`);
+    try {
+      const bytes = await fetchBytes(f.path);
+      if (isPdf(f)) {
+        const src = await PDFLib.PDFDocument.load(bytes, { ignoreEncryption: true });
+        let view = null; try { view = await openPdf(bytes.slice()); } catch (e) {}
+        const n = src.getPageCount();
+        for (let i = 0; i < n; i++) {
+          busy(true, `تفكيك «${base}»: صفحة ${i + 1} من ${n}`);
+          const out = await PDFLib.PDFDocument.create();
+          out.addPage((await out.copyPages(src, [i]))[0]);
+          const id = uid(), rec = { id, pdf: `work/pool/${id}.pdf`, thumb: null, label: n > 1 ? `${base} (${i + 1}/${n})` : base };
+          await writeBytes(rec.pdf, await out.save(), 'DATA');
+          if (view) try { rec.thumb = `work/pool/${id}.jpg`; await writeDataUrl(rec.thumb, thumbOf(await renderPage(view, i + 1, 360))); } catch (e) { rec.thumb = null; }
+          S.pool.push(rec); added++;
+        }
+        if (view) closePdf(view);
+      } else {
+        const r = await imageToPage(bytes, f.mime);
+        const id = uid(), rec = { id, pdf: `work/pool/${id}.pdf`, thumb: `work/pool/${id}.jpg`, label: base };
+        await writeBytes(rec.pdf, r.pdf, 'DATA'); await writeDataUrl(rec.thumb, r.thumb);
+        S.pool.push(rec); added++;
+      }
+      save();
+    } catch (e) { errors.push(`${f.name}: ${e.message || e}`); }
+    if (f.temp) Filesystem.deleteFile({ path: f.path }).catch(() => {});
+  }
+  busy(false);
+  if (errors.length) alert('تعذّر فتح بعض الملفات:\n' + errors.join('\n'));
+  if (added) { poolSel.clear(); go('sPool'); }
+}
+$('importBtn').onclick = async () => {
+  let r;
+  try { r = await FilePicker.pickFiles({ types: ['application/pdf', 'image/*'], limit: 0, readData: false }); }
+  catch (e) { if (!isCancel(e)) alert('تعذّر فتح اختيار الملفات: ' + (e.message || e)); return; }
+  await importFiles((r.files || []).map(f => ({ name: f.name, mime: f.mimeType, path: f.path })));
+};
+// ملفات مشاركة من واتساب أو غيره
+async function onShared(ev) {
+  const files = (ev.files || []).map(f => ({ name: f.name, mime: f.mimeType, path: f.uri, temp: true }));
+  if (!files.length) return;
+  if (S.done) {
+    if (!confirm('وصلت ملفات جديدة. بدء عمل جديد لها؟\n(الملفات المحفوظة سابقاً تبقى في مجلدها)')) return;
+    await resetJob();
+  }
+  if (!S.person) { pendingShare = files; render(); return; }
+  await importFiles(files);
+}
+if (CapacitorShareTarget) CapacitorShareTarget.addListener('shareReceived', onShared);
 
 // ---------- الصوت ----------
 async function listen() {
@@ -184,16 +384,43 @@ async function micInto(btn) {
 // ---------- نافذة التسمية ----------
 $('autoMic').checked = localStorage.getItem('autoMic') !== '0';
 $('autoMic').onchange = () => localStorage.setItem('autoMic', $('autoMic').checked ? '1' : '0');
-function askName(title, value, auto) {
-  return new Promise(res => {
+$('enhance').checked = localStorage.getItem('enhance') !== '0';
+$('enhance').onchange = () => localStorage.setItem('enhance', $('enhance').checked ? '1' : '0');
+let nameDone = null;
+function askName(title, value, auto, thumbPath) {
+  return new Promise(async res => {
     $('nameTitle').textContent = title; $('nameIn').value = value || '';
+    const pv = $('namePrev'); pv.style.display = 'none'; pv.removeAttribute('src'); pv.onerror = () => pv.style.display = 'none';
+    if (thumbPath) dataSrc(thumbPath).then(u => { pv.src = u; pv.style.display = 'block'; }).catch(() => {});
     $('nameModal').classList.add('on');
-    const done = v => { $('nameModal').classList.remove('on'); $('nameOk').onclick = $('nameCancel').onclick = null; res(v); };
-    $('nameOk').onclick = () => done($('nameIn').value.trim() || value);
-    $('nameCancel').onclick = () => done(null);
+    nameDone = v => { $('nameModal').classList.remove('on'); nameDone = null; res(v); };
+    $('nameOk').onclick = () => nameDone($('nameIn').value.trim() || value);
+    $('nameCancel').onclick = () => nameDone(null);
     if (auto && $('autoMic').checked) setTimeout(() => micInto(document.querySelector('[data-for=nameIn]')), 250);
   });
 }
+
+// ---------- العارض ----------
+let vScale = 1;
+async function viewPdf(path, title) {
+  $('vTitle').textContent = title || ''; $('vBody').innerHTML = ''; vScale = 1; applyZoom();
+  $('viewer').classList.add('on');
+  try {
+    const doc = await openPdf(await readBytes(path));
+    const w = Math.min(2200, Math.round(innerWidth * (devicePixelRatio || 2) * 1.5));
+    for (let i = 1; i <= doc.numPages && $('viewer').classList.contains('on'); i++) {
+      const img = document.createElement('img');
+      img.src = (await renderPage(doc, i, w)).toDataURL('image/jpeg', 0.9);
+      $('vBody').appendChild(img);
+    }
+    closePdf(doc);
+  } catch (e) { $('vBody').innerHTML = '<p style="color:#fff">تعذّر عرض الملف: ' + (e.message || e) + '</p>'; }
+}
+function applyZoom() { $('vBody').querySelectorAll('img').forEach(i => i.style.width = (100 * vScale) + '%'); }
+$('vZoomIn').onclick = () => { vScale = Math.min(4, vScale + 0.5); applyZoom(); };
+$('vZoomOut').onclick = () => { vScale = Math.max(1, vScale - 0.5); applyZoom(); };
+$('vClose').onclick = () => { $('viewer').classList.remove('on'); $('vBody').innerHTML = ''; };
+new MutationObserver(applyZoom).observe($('vBody'), { childList: true });
 
 // ---------- المسح ----------
 async function scan() {
@@ -207,8 +434,7 @@ async function scan() {
   }
   if (!r || !r.pdf) return;
   busy(true, 'جارٍ حفظ المسح…');
-  const id = String(Date.now());
-  const pdf = `work/${id}.pdf`, thumb = `work/${id}.jpg`;
+  const id = uid(), pdf = `work/${id}.pdf`, thumb = `work/${id}.jpg`;
   try {
     await Filesystem.mkdir({ path: 'work', directory: 'DATA', recursive: true }).catch(() => {});
     await Filesystem.copy({ from: fpath(r.pdf.uri), to: pdf, toDirectory: 'DATA' });
@@ -216,39 +442,54 @@ async function scan() {
   } catch (e) { busy(false); alert('خطأ في الحفظ: ' + (e.message || e)); return; }
   busy(false);
   const def = `مستند ${S.docs.length + 1}`;
-  const name = await askName(`اسم المستند (${r.pdf.pageCount} ${r.pdf.pageCount > 1 ? 'صفحات' : 'صفحة'})`, def, true);
+  const name = await askName(`اسم المستند (${pagesTxt(r.pdf.pageCount)})`, def, true, thumb);
   S.docs.push({ id, name: name || def, pages: r.pdf.pageCount, pdf, thumb });
   save(); render();
 }
 
 // ---------- العرض ----------
-function show(screen) {
-  ['sStart', 'sDocs', 'sDone'].forEach(s => $(s).classList.toggle('on', s === screen));
-  $('docsBar').style.display = screen === 'sDocs' && !selMode ? 'flex' : 'none';
-  $('selBar').style.display = screen === 'sDocs' && selMode ? 'flex' : 'none';
+function go(s) { screen = s; render(); }
+function bars(s) {
+  $('docsBar').style.display = s === 'sDocs' && !selMode ? 'flex' : 'none';
+  $('selBar').style.display = s === 'sDocs' && selMode ? 'flex' : 'none';
+  $('poolBar').style.display = s === 'sPool' ? 'flex' : 'none';
 }
-async function render() {
-  if (S.done) { renderDone(); return; }
-  if (!S.person) { $('title').textContent = 'ماسح الوثائق'; $('count').textContent = ''; show('sStart'); return; }
+function show(s) { ['sStart', 'sDocs', 'sPool', 'sDone'].forEach(x => $(x).classList.toggle('on', x === s)); bars(s); }
+function render() {
+  if (S.done && screen !== 'sDocs' && screen !== 'sPool') return renderDone();
+  if (!S.person) {
+    $('title').textContent = 'سكانر إسلام'; $('count').textContent = '';
+    $('pendingNote').style.display = pendingShare ? 'flex' : 'none';
+    if (pendingShare) $('pendingNote').querySelector('span').textContent = `📥 وصلت ${pendingShare.length} ملفات. اكتب اسم صاحب الوثائق ثم «ابدأ».`;
+    return show('sStart');
+  }
   $('title').textContent = 'وثائق: ' + S.person;
+  if (screen === 'sPool' && S.pool.length) return renderPool();
+  if (screen === 'sPool') screen = 'sDocs';
+  renderDocs();
+}
+function renderDocs() {
   const pages = S.docs.reduce((a, d) => a + d.pages, 0);
   $('count').textContent = `${S.docs.length} مستند · ${pages} صفحة`;
+  $('poolBanner').style.display = S.pool.length ? 'flex' : 'none';
+  $('poolBanner').querySelector('span').textContent = `📥 ${S.pool.length} صفحة مستوردة بانتظار التسمية`;
   show('sDocs');
   const L = $('list'); L.innerHTML = '';
   if (!S.docs.length) {
-    L.innerHTML = `<div class="empty">اضغط «📄 مسح مستند» للبدء.<br><br>• لمستند من ورقة واحدة: صوّر ورقة ثم «تم».<br>• لمستند من عدة أوراق في PDF واحد: صوّر كل أوراقه في نفس المرة قبل «تم».<br><br><small>اضغط مطولاً على العنوان لتغيير اسم صاحب الوثائق.</small></div>`;
+    L.innerHTML = `<div class="empty">📄 <b>مسح</b>: صوّر ورقة ثم «تم». لمستند من عدة أوراق في PDF واحد صوّر كل أوراقه قبل «تم».<br>📥 <b>استيراد</b>: صور أو ملفات PDF من الهاتف، أو شارِكها من واتساب إلى «سكانر إسلام».<br><br><small>اضغط مطولاً على العنوان لتغيير اسم صاحب الوثائق.</small></div>`;
     return;
   }
   S.docs.forEach((d, i) => {
     const el = document.createElement('div');
     el.className = 'doc' + (selected.has(d.id) ? ' sel' : '');
-    el.innerHTML = `<div class="num">${i + 1}</div><img alt=""><div class="info"><div class="nm"></div><div class="pg">${d.pages} ${d.pages > 1 ? 'صفحات' : 'صفحة'}</div></div>` +
+    el.innerHTML = `<div class="num">${i + 1}</div><img alt="" data-a="view"><div class="info"><div class="nm"></div><div class="pg">${pagesTxt(d.pages)}</div></div>` +
       (selMode ? '' : `<div class="acts"><button data-a="ren">✏️</button><button data-a="up" ${i ? '' : 'disabled'}>⬆️</button><button data-a="down" ${i < S.docs.length - 1 ? '' : 'disabled'}>⬇️</button><button class="bad" data-a="del">🗑️</button></div>`);
     el.querySelector('.nm').textContent = d.name;
     if (d.thumb) dataSrc(d.thumb).then(u => el.querySelector('img').src = u).catch(() => {});
     el.onclick = ev => {
-      const a = ev.target.closest('button') && ev.target.closest('button').dataset.a;
-      if (selMode) { selected.has(d.id) ? selected.delete(d.id) : selected.add(d.id); render(); return; }
+      const t = ev.target.closest('[data-a]'), a = t && t.dataset.a;
+      if (selMode) { selected.has(d.id) ? selected.delete(d.id) : selected.add(d.id); renderDocs(); return; }
+      if (a === 'view') return viewPdf(d.pdf, d.name);
       if (a) act(a, i);
     };
     L.appendChild(el);
@@ -256,38 +497,110 @@ async function render() {
 }
 async function act(a, i) {
   const d = S.docs[i];
-  if (a === 'ren') { const n = await askName('تعديل الاسم', d.name, false); if (n) d.name = n; }
+  if (a === 'ren') { const n = await askName('تعديل الاسم', d.name, false, d.thumb); if (n) d.name = n; }
   if (a === 'up') [S.docs[i - 1], S.docs[i]] = [S.docs[i], S.docs[i - 1]];
   if (a === 'down') [S.docs[i + 1], S.docs[i]] = [S.docs[i], S.docs[i + 1]];
-  if (a === 'del') { if (!confirm(`حذف «${d.name}»؟`)) return; S.docs.splice(i, 1); rm(d.pdf); rm(d.thumb); }
-  save(); render();
+  if (a === 'del') { if (!confirm(`حذف «${d.name}»؟`)) return; S.docs.splice(i, 1); rm(d.pdf); if (!S.docs.some(x => x.thumb === d.thumb)) rm(d.thumb); }
+  save(); renderDocs();
+}
+function renderPool() {
+  $('count').textContent = `${S.pool.length} صفحة · محدد ${poolSel.size}`;
+  show('sPool');
+  $('poolMake').textContent = poolSel.size ? `✅ مستند (${poolSel.size})` : '✅ مستند';
+  $('poolSingles').textContent = poolSel.size ? '📄 المحدد منفردة' : '📄 الكل منفردة';
+  const G = $('grid'); G.innerHTML = '';
+  S.pool.forEach((p, i) => {
+    const t = document.createElement('div');
+    t.className = 'tile' + (poolSel.has(p.id) ? ' sel' : '');
+    t.innerHTML = `<img alt=""><div class="no">${i + 1}</div><button class="zoom">🔍</button><div class="lb"></div>`;
+    t.querySelector('.lb').textContent = p.label || '';
+    if (p.thumb) dataSrc(p.thumb).then(u => t.querySelector('img').src = u).catch(() => {});
+    t.onclick = ev => {
+      if (ev.target.closest('.zoom')) return viewPdf(p.pdf, `${i + 1} · ${p.label || ''}`);
+      poolSel.has(p.id) ? poolSel.delete(p.id) : poolSel.add(p.id);
+      renderPool();
+    };
+    G.appendChild(t);
+  });
+}
+function renderDone() {
+  const D = S.done;
+  $('title').textContent = 'وثائق: ' + S.person; $('count').textContent = '';
+  $('doneInfo').innerHTML = `المجلد: <b></b><br>الملف المجمّع: <b></b> (${pagesTxt(D.all.pages)})<br>المستندات المنفردة: ${D.files.length}`;
+  const b = $('doneInfo').querySelectorAll('b'); b[0].textContent = D.folder; b[1].textContent = D.all.name;
+  show('sDone');
 }
 
+// ---------- الصفحات المستوردة → مستندات ----------
+async function makeDoc(pages, name) {
+  const { bytes, pages: n } = await mergePdfs(pages.map(p => p.pdf));
+  const id = uid(), pdf = `work/${id}.pdf`;
+  await writeBytes(pdf, bytes, 'DATA');
+  let thumb = null;
+  if (pages[0].thumb) { thumb = `work/${id}.jpg`; await Filesystem.copy({ from: pages[0].thumb, directory: 'DATA', to: thumb, toDirectory: 'DATA' }).catch(() => { thumb = null; }); }
+  S.docs.push({ id, name, pages: n, pdf, thumb });
+  const ids = new Set(pages.map(p => p.id));
+  S.pool = S.pool.filter(p => !ids.has(p.id));
+  pages.forEach(p => { poolSel.delete(p.id); rm(p.pdf); rm(p.thumb); });
+  save();
+}
+$('poolMake').onclick = async () => {
+  const pick = S.pool.filter(p => poolSel.has(p.id));
+  if (!pick.length) return alert('اضغط على صفحة أو أكثر لتحديدها أولاً');
+  const def = `مستند ${S.docs.length + 1}`;
+  const name = await askName(`اسم المستند (${pagesTxt(pick.length)})`, def, true, pick[0].thumb);
+  if (!name) return;
+  busy(true, 'جارٍ إنشاء المستند…');
+  try { await makeDoc(pick, name); } catch (e) { alert('خطأ: ' + (e.message || e)); }
+  busy(false); render();
+};
+$('poolSingles').onclick = async () => {
+  const list = poolSel.size ? S.pool.filter(p => poolSel.has(p.id)) : S.pool.slice();
+  for (let i = 0; i < list.length; i++) {
+    const def = `مستند ${S.docs.length + 1}`;
+    const name = await askName(`اسم الصفحة ${i + 1} من ${list.length}`, def, true, list[i].thumb);
+    if (!name) break; // إلغاء = توقف، والباقي يبقى في الصفحات المستوردة
+    busy(true, 'جارٍ الحفظ…');
+    try { await makeDoc([list[i]], name); } catch (e) { busy(false); alert('خطأ: ' + (e.message || e)); break; }
+    busy(false);
+    if (screen === 'sPool') renderPool();
+  }
+  render();
+};
+$('poolDel').onclick = () => {
+  if (!poolSel.size) return alert('حدد الصفحات المراد حذفها');
+  if (!confirm(`حذف ${poolSel.size} صفحة من الصفحات المستوردة؟`)) return;
+  S.pool = S.pool.filter(p => { if (poolSel.has(p.id)) { rm(p.pdf); rm(p.thumb); return false; } return true; });
+  poolSel.clear(); save(); render();
+};
+$('poolBack').onclick = () => go('sDocs');
+$('openPool').onclick = () => { poolSel.clear(); go('sPool'); };
+
 // ---------- الدمج اليدوي ----------
-$('selBtn').onclick = () => { if (S.docs.length < 2) return alert('يلزم مستندان على الأقل'); selMode = true; selected.clear(); render(); };
-$('cancelSel').onclick = () => { selMode = false; selected.clear(); render(); };
+$('selBtn').onclick = () => { if (S.docs.length < 2) return alert('يلزم مستندان على الأقل'); selMode = true; selected.clear(); renderDocs(); };
+$('cancelSel').onclick = () => { selMode = false; selected.clear(); renderDocs(); };
 $('mergeBtn').onclick = async () => {
   const pick = S.docs.filter(d => selected.has(d.id));
   if (pick.length < 2) return alert('اختر مستندين أو أكثر');
-  const name = await askName('اسم المستند المدموج', pick[0].name, false);
+  const name = await askName('اسم المستند المدموج', pick[0].name, false, pick[0].thumb);
   if (!name) return;
   busy(true, 'جارٍ الدمج…');
   try {
     const { bytes, pages } = await mergePdfs(pick.map(d => d.pdf));
-    const id = String(Date.now()), pdf = `work/${id}.pdf`;
+    const id = uid(), pdf = `work/${id}.pdf`;
     await writeBytes(pdf, bytes, 'DATA');
     const at = S.docs.indexOf(pick[0]);
-    const nd = { id, name, pages, pdf, thumb: pick[0].thumb };
     S.docs = S.docs.filter(d => !selected.has(d.id));
-    S.docs.splice(Math.min(at, S.docs.length), 0, nd);
+    S.docs.splice(Math.min(at, S.docs.length), 0, { id, name, pages, pdf, thumb: pick[0].thumb });
     pick.forEach(d => { rm(d.pdf); if (d !== pick[0]) rm(d.thumb); });
   } catch (e) { alert('خطأ في الدمج: ' + (e.message || e)); }
-  busy(false); selMode = false; selected.clear(); save(); render();
+  busy(false); selMode = false; selected.clear(); save(); renderDocs();
 };
 
 // ---------- الحفظ النهائي ----------
 $('saveBtn').onclick = async () => {
   if (!S.docs.length) return alert('لا توجد مستندات بعد');
+  if (S.pool.length && !confirm(`يوجد ${S.pool.length} صفحة مستوردة لم تُسمَّ بعد ولن تُحفظ. متابعة؟`)) return;
   busy(true, 'جارٍ حفظ الملفات…');
   try {
     try { await Filesystem.requestPermissions(); } catch (e) {}
@@ -299,38 +612,54 @@ $('saveBtn').onclick = async () => {
       const f = uniq(safe(d.name)), path = `${folder}/${f}`;
       await rm(path, 'DOCUMENTS');
       await Filesystem.copy({ from: d.pdf, directory: 'DATA', to: path, toDirectory: 'DOCUMENTS' });
-      files.push({ name: f, uri: (await Filesystem.getUri({ path, directory: 'DOCUMENTS' })).uri });
+      files.push({ name: f, data: d.pdf, uri: (await Filesystem.getUri({ path, directory: 'DOCUMENTS' })).uri });
     }
     busy(true, 'جارٍ إنشاء الملف المجمّع…');
     const all = uniq(safe('جميع وثائق ' + S.person)), allPath = `${folder}/${all}`;
     const { bytes, pages } = await mergePdfs(S.docs.map(d => d.pdf));
-    await writeBytes(allPath, bytes, 'DOCUMENTS');
+    await writeBytes('work/all.pdf', bytes, 'DATA');
+    await rm(allPath, 'DOCUMENTS');
+    await Filesystem.copy({ from: 'work/all.pdf', directory: 'DATA', to: allPath, toDirectory: 'DOCUMENTS' });
     const allUri = (await Filesystem.getUri({ path: allPath, directory: 'DOCUMENTS' })).uri;
-    S.done = { folder: `Documents/${folder}`, files, all: { name: all, uri: allUri, pages } };
-    save();
+    S.done = { folder: `Documents/${folder}`, files, all: { name: all, uri: allUri, pages, data: 'work/all.pdf' } };
+    screen = ''; save();
   } catch (e) { busy(false); alert('تعذّر الحفظ: ' + (e.message || e)); return; }
   busy(false); render();
 };
-function renderDone() {
-  const D = S.done;
-  $('title').textContent = 'وثائق: ' + S.person; $('count').textContent = '';
-  $('doneInfo').innerHTML = `المجلد: <b></b><br>الملف المجمّع: <b></b> (${D.all.pages} صفحة)<br>المستندات المنفردة: ${D.files.length}`;
-  const b = $('doneInfo').querySelectorAll('b'); b[0].textContent = D.folder; b[1].textContent = D.all.name;
-  show('sDone');
-}
+$('shareZip').onclick = async () => {
+  busy(true, 'جارٍ إنشاء الملف المضغوط…');
+  try {
+    const entries = {};
+    entries[S.done.all.name] = [await readBytes(S.done.all.data), { level: 0 }];
+    for (const f of S.done.files) entries[f.name] = [await readBytes(f.data), { level: 0 }];
+    const zip = fflate.zipSync(entries);
+    const zname = `وثائق ${safe(S.person)}.zip`;
+    await writeBytes(zname, zip, 'CACHE');
+    const { uri } = await Filesystem.getUri({ path: zname, directory: 'CACHE' });
+    busy(false);
+    await Share.share({ title: zname, files: [uri] }).catch(() => {});
+  } catch (e) { busy(false); alert('تعذّر إنشاء الملف المضغوط: ' + (e.message || e)); }
+};
 $('shareAll').onclick = () => Share.share({ title: 'وثائق ' + S.person, files: [S.done.all.uri, ...S.done.files.map(f => f.uri)] }).catch(() => {});
 $('shareOne').onclick = () => Share.share({ title: S.done.all.name, files: [S.done.all.uri] }).catch(() => {});
+$('backEdit').onclick = () => { S.done = null; save(); go('sDocs'); };
+async function resetJob() {
+  for (const d of S.docs) { await rm(d.pdf); await rm(d.thumb); }
+  for (const p of S.pool) { await rm(p.pdf); await rm(p.thumb); }
+  await rm('work/all.pdf');
+  S = { person: '', docs: [], pool: [], done: null }; screen = ''; save(); $('personIn').value = '';
+}
 $('newJob').onclick = async () => {
   if (!confirm('بدء عمل جديد؟ الملفات المحفوظة تبقى في مجلد المستندات.')) return;
-  for (const d of S.docs) { await rm(d.pdf); await rm(d.thumb); }
-  S = { person: '', docs: [], done: null }; save(); $('personIn').value = ''; render();
+  await resetJob(); render();
 };
 
 // ---------- البداية ----------
-$('startBtn').onclick = () => {
+$('startBtn').onclick = async () => {
   const n = $('personIn').value.trim();
   if (!n) return alert('اكتب أو قل اسم صاحب الوثائق');
   S.person = n; save(); render();
+  if (pendingShare) { const f = pendingShare; pendingShare = null; await importFiles(f); }
 };
 $('scanBtn').onclick = scan;
 let pressT;
@@ -339,6 +668,15 @@ $('title').addEventListener('touchstart', () => pressT = setTimeout(async () => 
   const n = await askName('اسم صاحب الوثائق', S.person, false); if (n) { S.person = n; save(); render(); }
 }, 700));
 $('title').addEventListener('touchend', () => clearTimeout(pressT));
+
+// زر الرجوع في الهاتف
+if (App) App.addListener('backButton', () => {
+  if ($('viewer').classList.contains('on')) return $('vClose').onclick();
+  if (nameDone) return nameDone(null);
+  if (selMode) return $('cancelSel').onclick();
+  if (screen === 'sPool') return go('sDocs');
+  App.minimizeApp ? App.minimizeApp() : App.exitApp();
+});
 render();
 </script>
 </body>
